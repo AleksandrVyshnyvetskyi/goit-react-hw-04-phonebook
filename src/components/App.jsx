@@ -1,99 +1,80 @@
-import React from "react";
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import { Phonebook } from "./phonebook/Phonebook";
 import {PhonebookFilter} from './phonebook/PhonebookFilter';
 import {PhonebookList} from './phonebook/PhonebookList';
 import './phonebook/Phonebook.css';
 
+export function App(){
+  const [contacts, setContacts] = useState(JSON.parse(localStorage.getItem('phone-list')) ?? []);
+  const [filter, setFilter] = useState('');
 
-class App extends React.Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+  useEffect(() => {
+    window.localStorage.setItem('phone-list', JSON.stringify(contacts));
+  }, [contacts]);
+  
 
-  isDublicate = ({ name }) => {
-    const { contacts } = this.state;
-    const result = contacts.find(item => item.name === name);
-    return result;
-  };
+  useEffect(() => {
+        return () => {
+          localStorage.removeItem('phone-list');
+        }
+      }, []);
 
-  addContacts = data => {
-    if (this.isDublicate(data)) {
-      return alert(`${data.name} уже существует в списке контактов 🤪 `);
-    }
-    this.setState(prevState => {
-      const newContact = {
-        id: nanoid(5),
-        ...data,
+  const isDublicate = (contact) => {
+        const result = contacts.find((item) => item.name === contact.name);
+        return result;
       };
-      return {
-        contacts: [...prevState.contacts, newContact],
+
+  const addContact = (data) => {
+        if (isDublicate(data)) {
+          return alert(`${data.name} уже существует в списке контактов 🤪 `);
+        }
+        const newContact = {
+          ...data,
+          id: nanoid(),
+        }
+        setContacts((prevState) => {
+          return [...prevState, newContact];
+        });
       };
-    });
-  };
 
-  removeContact = id => {
-    this.setState(prevState => {
-      const newContact = prevState.contacts.filter(item => item.id !== id);
-      return { contacts: newContact };
-    });
-  };
-
-  filterChange = evt => {
-    const { name, value } = evt.currentTarget;
-    this.setState({ [name]: value });
-  };
-
-  getFilter = () => {
-    const { contacts, filter } = this.state;
-    if (!filter) {
-      return contacts;
-    }
-    const normalaizedFilter = filter.toLowerCase();
-    const filterContact = contacts.filter(({ name }) => {
-      const normalaizedName = name.toLowerCase();
-      const result = normalaizedName.includes(normalaizedFilter);
-      return result;
-    });
-    return filterContact;
-  };
-
- 
-  componentDidUpdate(prevState) {
-    if (this.state !== prevState) {
-      localStorage.setItem('phone-list', JSON.stringify(this.state.contacts));
-    }
-  }
-
-  componentDidMount() {
-      const phoneList = localStorage.getItem('phone-list');
-      const parsePhoneList = JSON.parse(phoneList);
-      if(parsePhoneList){
-        this.setState({contacts: parsePhoneList})
+      const removeContact = (id) => {
+        setContacts((prevState) => {
+          const newContacts = prevState.filter((item) => item.id !== id);
+          return newContacts;
+        })
       }
 
-      
-  }
+      const filterChange = (event) => {
+        const { value } = event.target;
+        setFilter(value);
+      }
 
-  render() {
-    return (
-      <>
-      <h1>Phonebook</h1>
-        <Phonebook onAddContacs={this.addContacts} />
-        {this.state.contacts.length !== 0 && (
-          <>
-            <h2>Contacts :</h2>
-            <PhonebookFilter onChange={this.filterChange} value={this.state.filter} />
-            <PhonebookList
-              items={this.getFilter()}
-              onRemove={this.removeContact}
-            />
-          </>
-        )}
-      </>
-    );
-  }
+      const getFilter = () => {
+        const filterNormolaze = filter.toLocaleLowerCase();
+        if (!filter) {
+          return contacts;
+        }
+        const filterContacts = contacts.filter(({ name }) => {
+          const nameContactNormolaze = name.toLocaleLowerCase();
+          const resultFilter = nameContactNormolaze.includes(filterNormolaze);
+          return resultFilter;
+        })
+        return filterContacts;
+      }
+
+  return (
+    <>
+    <h1>Phonebook</h1>
+      <Phonebook onAddContacs={addContact}/>
+        <>
+          <h2>Contacts :</h2>
+          <PhonebookFilter onChange={filterChange} />
+          <PhonebookList
+            items={getFilter()}
+            onRemove={removeContact}
+          />
+        </>
+    </>
+  );
 }
-
-export {App}
